@@ -218,21 +218,23 @@ function make_regression_line(series, tail_days) {
     var fit = regression('linear', series.slice(-1 * tail_days));
     var last_day = series[series.length - 1][0];
     var first_day = last_day - tail_days;
-    var x_intercept = fit.equation[1] / (-1 * fit.equation[0]);
+    var x_intercept = Math.round(fit.equation[1] / (-1 * fit.equation[0]));
     var x_max = x_intercept;
 
-    if (x_intercept < 0) {
-        x_max = last_day;
+    if (fit.equation[0] > 0) {
+        // Slope is positive!!!!
+        x_max = last_day + 10;
+        x_intercept = "never";
     }
-    
-    if ((x_max - last_day) > 30) {
-        x_max = last_day + 30;
+    else {
+        if ((x_max - last_day) > 30) {
+            x_max = last_day + 30;
+        }
     }
-        
     var retval = {
         points : [
             [first_day, project_regression(fit.equation, first_day)],
-            [x_intercept, project_regression(fit.equation, x_max)]
+            [x_max, project_regression(fit.equation, x_max)]
         ],
         equation : fit,
         x_intercept : x_intercept,
@@ -390,10 +392,10 @@ function graph_metrics() {
                                                data.total_estimates + " person-hours"));
     $("#stats").append(document.createElement("br"));
     $("#stats").append(document.createTextNode("Estimated completion date (by bug count): " +
-                                               Math.round(data.projected_bugs_completion)));
+                                               data.projected_bugs_completion));
     $("#stats").append(document.createElement("br"));
     $("#stats").append(document.createTextNode("Estimated completion date (by estimates): " +
-                                               Math.round(data.projected_hours_completion)));
+                                               data.projected_hours_completion));
     $("#stats").append(document.createElement("br"));
 }
 
