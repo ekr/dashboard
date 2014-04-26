@@ -1,7 +1,9 @@
 "use strict";
 
 // Global data values.
-var config = {};
+var config = {
+    lookback:14
+};
 var data = undefined;
 var plot = null;
 
@@ -261,7 +263,7 @@ function graph_metrics() {
 
         series_live.push([k-data.oldest_day, v]);
     });
-    series_live_fit = make_regression_line(series_live, 14);
+    series_live_fit = make_regression_line(series_live, config.lookback);
     x_max = series_live_fit.x_max;
     data.projected_bugs_completion = series_live_fit.x_intercept;
 
@@ -271,7 +273,7 @@ function graph_metrics() {
 
         series_live_work.push([k-data.oldest_day, v]);
     });
-    series_live_work_fit = make_regression_line(series_live_work, 14);
+    series_live_work_fit = make_regression_line(series_live_work, config.lookback);
     if (series_live_work_fit.x_max > x_max) {
         x_max = series_live_work_fit.x_max;
     }
@@ -420,7 +422,10 @@ function form_submit()  {
 parseQueryString(function (name, value, integer, bool, list) {
   switch (name) {
   case "bug":
-    config.meta_bug = value;
+    config.meta_bug = integer;
+    break;
+  case "lookback":
+    config.lookback = integer;
     break;
   }
 });
