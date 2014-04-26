@@ -278,6 +278,7 @@ function graph_metrics() {
         x_max = series_live_work_fit.x_max;
     }
     data.projected_hours_completion = series_live_work_fit.x_intercept;
+
     $.map(data.added, function(v, k) {
         series_added.push([k-data.oldest_day, v]);
         total_added += v;
@@ -333,14 +334,16 @@ function graph_metrics() {
                                      label : "Added",
                                      renderer:$.jqplot.BarRenderer,
                                      rendererOptions : {
-                                         barWidth:4
+                                         barWidth:4,
+                                         barPadding:1,
                                      }
                                  },
                                  {
                                      label : "Fixed",
                                      renderer:$.jqplot.BarRenderer,
                                      rendererOptions : {
-                                       barWidth:4
+                                       barWidth:4,
+                                       barPadding:1,
                                      }
                                  },
                                  {   showMarker: false,
@@ -362,6 +365,8 @@ function graph_metrics() {
     $('#burndown').bind('jqplotDataClick', function(ev, seriesIndex, pointIndex, val) {
         var d;
 
+        console.log("CLICKED: " + val[0]);
+
         switch(seriesIndex) {
         case 2:
             d = data.added_bugs;
@@ -372,8 +377,7 @@ function graph_metrics() {
         default:
             return;
         }
-
-        console.log("Bugs = " + JSON.stringify(d[val[0] + data.oldest_day]));
+//        console.log("Bugs = " + JSON.stringify(d[val[0] + data.oldest_day]));
     });
 
     $("#stats").append(document.createTextNode("Open bugs: " + data.live[data.today]));
