@@ -246,6 +246,15 @@ function make_regression_line(series, tail_days) {
     return retval;
 }
 
+function foreach_day(arr, f) {
+    var kk = Object.keys(arr);
+    kk.sort();
+    
+    kk.forEach(function(k) {
+        f(arr[k],k);
+    });
+}
+
 function graph_metrics() {
     var series_live = [];
     var series_added = [];
@@ -259,7 +268,7 @@ function graph_metrics() {
     var total_fixed = 0;
     var x_max = 0;
 
-    $.map(data.live, function(v, k) {
+    foreach_day(data.live, function(v, k) {
         if (max_live < v)
             max_live = v;
 
@@ -269,7 +278,7 @@ function graph_metrics() {
     x_max = series_live_fit.x_max;
     data.projected_bugs_completion = series_live_fit.x_intercept;
 
-    $.map(data.live_work, function(v, k) {
+    foreach_day(data.live_work, function(v, k) {
         if (max_live_work < v)
             max_live_work = v;
 
@@ -281,12 +290,12 @@ function graph_metrics() {
     }
     data.projected_hours_completion = series_live_work_fit.x_intercept;
 
-    $.map(data.added, function(v, k) {
+    foreach_day(data.added, function(v, k) {
         series_added.push([k-data.oldest_day, v]);
         total_added += v;
     });
 
-    $.map(data.fixed, function(v, k) {
+    foreach_day(data.fixed, function(v, k) {
         series_fixed.push([k-data.oldest_day, v]);
         total_fixed += v;
     });
