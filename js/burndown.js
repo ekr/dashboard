@@ -252,7 +252,7 @@ function make_regression_line(series, tail_days) {
     var x_intercept = Math.round(fit.equation[1] / (-1 * fit.equation[0]));
     var x_max = x_intercept;
 
-    if (fit.equation[0] > 0) {
+    if (fit.equation[0] >= 0) {
         // Slope is positive!!!!
         x_max = last_day + 10;
         x_intercept = "never";
