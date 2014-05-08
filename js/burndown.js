@@ -41,11 +41,22 @@ function retrieve_bug(bug_id) {
     
     data.outstanding_bugs++;
     data.total_bugs++;
+    
     q.then(function (more) {
-        more.bugs.forEach(function(bug) {
-            data.all_bugs[bug.id] = bug;
-            // Report our dependencies.
-            d.resolve(bug.depends_on);
+        var q2;
+
+        data.all_bugs[bug_id] = more.bugs[0];
+       
+        q2 = query("Bug.history", [{ids:[bug_id],
+                                   include_fields:["_default", "cf_last_resolved"]}]);
+        q2.then(function(x) {
+            data.all_bugs[bug_id].history =
+                x.bugs[0].history;
+            d.resolve(data.all_bugs[bug_id].depends_on);
+        });
+
+        q2.fail(function() {
+            d.resolve(data.all_bugs[bug_id].depends_on);
         });
     });
 
@@ -163,6 +174,25 @@ function compute_estimate(b) {
     }
 }
 
+function find_last_completed(bug) {
+    var i;
+    var b;
+
+    i = bug.history.length;;
+    do {
+        --i;
+
+        for(b=0; b<bug.history[i].changes.length; ++b) {
+            if (bug.history[i].changes[b].added === "RESOLVED" &&
+                bug.history[i].changes[b].field_name === "status") {
+                return bug.history[i].when;
+            }
+        }
+    } while(i>0);
+
+    return bug.last_change_time;
+}
+
 function compute_metrics() {
     data.today = date2day(new Date());
     data.oldest_day = date2day(new Date(data.all_bugs[data.meta_bug].creation_time));
@@ -190,7 +220,8 @@ function compute_metrics() {
 
             data.total_estimates += estimate;
         } else {
-            b.burndown_resolution_date = date2day(new Date(b.last_change_time));
+            
+            b.burndown_resolution_date = date2day(new Date(find_last_completed(b)));
             increment_ctr(data.fixed, b.burndown_resolution_date);
             add_entry(data.fixed_bugs, b.burndown_resolution_date, b);
         }
