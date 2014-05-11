@@ -2,7 +2,9 @@
 
 // Global data values.
 var config = {
-    lookback:14
+    lookback:14,
+    units:'hours',
+    sprint:undefined
 };
 var data = undefined;
 var plot = null;
@@ -31,6 +33,22 @@ function create_data() {
     };
 }
 
+function filter_bug(b) {
+    if (b.id === data.meta_bug)
+        return true;
+
+    if (config.sprint) {
+        var m = b.whiteboard.match(/s=([a-zA-Z0-9]+)/);
+        if (!m)
+            return false;
+
+        if (m[1] !== config.sprint)
+            return false;
+    }
+
+    return true;
+}
+
 // Retrieve bugs one at a time because sometimes we can't see
 // one for security reasons and if we retrieve multiple bugs
 // at once, then the whole request fails.
@@ -45,19 +63,24 @@ function retrieve_bug(bug_id) {
     q.then(function (more) {
         var q2;
 
-        data.all_bugs[bug_id] = more.bugs[0];
-       
-        q2 = query("Bug.history", [{ids:[bug_id],
-                                   include_fields:["_default", "cf_last_resolved"]}]);
-        q2.then(function(x) {
-            data.all_bugs[bug_id].history =
-                x.bugs[0].history;
-            d.resolve(data.all_bugs[bug_id].depends_on);
-        });
-
-        q2.fail(function() {
-            d.resolve(data.all_bugs[bug_id].depends_on);
-        });
+        if (filter_bug(more.bugs[0])) {
+            data.all_bugs[bug_id] = more.bugs[0];
+            
+            q2 = query("Bug.history", [{ids:[bug_id],
+                                        include_fields:["_default", "cf_last_resolved"]}]);
+            q2.then(function(x) {
+                data.all_bugs[bug_id].history =
+                    x.bugs[0].history;
+                d.resolve(data.all_bugs[bug_id].depends_on);
+            });
+            
+            q2.fail(function() {
+                d.resolve(data.all_bugs[bug_id].depends_on);
+            });
+        }
+        else {
+            d.resolve(more.bugs[0].depends_on);
+        }
     });
 
     q.fail(function() {
@@ -141,6 +164,26 @@ function is_completed(b) {
 }
 
 function compute_estimate(b) {
+    if (config.units === 'hours') {
+        return compute_estimate_hours(b);
+    }
+    else {
+        return compute_estimate_points(b);
+    }
+}
+
+function compute_estimate_points(b) {
+    var m = b.whiteboard.match(/\p=(.?\d+)/);
+    
+    if (!m) {
+        console.log("No estimate for bug " + b.id + "-->" + b.whiteboard);
+        return 0;
+    }
+
+    return parseFloat(m[1]);
+}
+
+function compute_estimate_hours(b) {
     var m = b.whiteboard.match(/\[est:\s*([\d\/]+)([dh])?\]/);
     var m2;
     var divisor;
@@ -208,7 +251,10 @@ function compute_metrics() {
         // Fill in defaults for non-meta bugs.
         if (!estimate) {
             if (b.summary.indexOf("meta") === -1) {
-                estimate = 8;
+                if (config.units === 'hours')
+                    estimate = 8;
+                else
+                    estiamte = .25;
             }
         }
         if (!estimate) {
@@ -319,7 +365,7 @@ function graph_metrics() {
     if (series_live_work_fit.x_max > x_max) {
         x_max = series_live_work_fit.x_max;
     }
-    data.projected_hours_completion = series_live_work_fit.x_intercept;
+    data.projected_time_completion = series_live_work_fit.x_intercept;
 
     foreach_day(data.added, function(v, k) {
         series_added.push([k-data.oldest_day, v]);
@@ -369,7 +415,7 @@ function graph_metrics() {
                                      label : "Open"
                                  },
                                  {   showMarker: false,
-                                     label : "Hours",
+                                     label : config.units,
                                      yaxis : 'y2axis'
                                  },
                                  {
@@ -392,7 +438,7 @@ function graph_metrics() {
                                      label : "Projected open"
                                  },
                                  {   showMarker: false,
-                                     label : "Projected hours",
+                                     label : "Projected " + config.units,
                                      yaxis : 'y2axis'
                                  },
 
@@ -429,13 +475,14 @@ function graph_metrics() {
     $("#stats").append(document.createTextNode("Fixed bugs: " + total_fixed));
     $("#stats").append(document.createElement("br"));
     $("#stats").append(document.createTextNode("Estimated remaining work: " +
-                                               data.total_estimates + " person-hours"));
+                                               data.total_estimates +  " " +
+                                               config.units));
     $("#stats").append(document.createElement("br"));
     $("#stats").append(document.createTextNode("Estimated completion date (by bug count): " +
                                                data.projected_bugs_completion));
     $("#stats").append(document.createElement("br"));
     $("#stats").append(document.createTextNode("Estimated completion date (by estimates): " +
-                                               data.projected_hours_completion));
+                                               data.projected_time_completion));
     $("#stats").append(document.createElement("br"));
 }
 
@@ -472,6 +519,12 @@ parseQueryString(function (name, value, integer, bool, list) {
     break;
   case "lookback":
     config.lookback = integer;
+    break;
+  case 'points':
+    config.units='points';
+    break;
+  case 'sprint':
+    config.sprint=value;
     break;
   }
 });
