@@ -254,7 +254,7 @@ function compute_metrics() {
                 if (config.units === 'hours')
                     estimate = 8;
                 else
-                    estiamte = .25;
+                    estimate = .25;
             }
         }
         if (!estimate) {
