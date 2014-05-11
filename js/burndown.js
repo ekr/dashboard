@@ -300,7 +300,7 @@ function make_regression_line(series, tail_days) {
 
     if (fit.equation[0] >= 0) {
         // Slope is positive!!!!
-        x_max = last_day + 10;
+        x_max = last_day + 30;
         x_intercept = "never";
     }
     else {
